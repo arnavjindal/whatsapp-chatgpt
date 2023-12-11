@@ -390,7 +390,7 @@ app.post("/webhook", (req, res) => {
 		  method: "POST", // Required, HTTP method, a string, e.g. POST, GET
 		  url:
 			"https://graph.facebook.com/v12.0/" +
-			phone_number_id +
+			PHONE_NUMBER_ID +
 			"/messages?access_token=" +
 			WHATSAPP_ACCESS_TOKEN,
 		  data: {
