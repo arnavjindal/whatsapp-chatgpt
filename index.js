@@ -11,7 +11,7 @@ const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN
 const PHONE_NUMBER = process.env.PHONE_NUMBER;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 
-const systemPrompt = "You are InstaIntern and your job is to help the user craft engaging, creative Instagram posts. You will output at least 3 options and they should be in this format - Content: The content of the post, Image: suggested image for the post, Hashtags: suggested hashtags for the post."
+const systemPrompt = "You are Whatsapp bot and working for a automobile workshop as their marketing officer. draft reply according to that"
 
 const configuration = new Configuration({
 	apiKey: OPENAI_KEY,
@@ -128,25 +128,6 @@ async function sendMessage(msg, from, id) {
 	});
 }
 
-app.post('/webhook', async (req, res) => {
-
-	try {
-		const body = req.body;
-
-		const { phone_number_id, from, msg_body } = getMsg(body)
-		console.log("phone", phone_number_id, from)
-		if (from && msg_body) {
-			let msg = await getChatCompletion(msg_body)
-			console.log("message:", from, msg_body + ": " + msg)
-			let result = await sendMessage(msg, from, phone_number_id);
-		}
-	} catch (error) {
-		console.log(error)
-	}
-
-	// res.send('Yo!')
-	res.sendStatus(200);
-});
 
 // app.post('/chat', async (req, res) => {
 
@@ -349,12 +330,104 @@ app.get('/get', (req, res) => {
   });
 });
 
-app.get('/webhook', (req, res) => {
-	let mode = req.query["hub.mode"];
-	let token = req.query["hub.verify_token"];
-	let challenge = req.query["hub.challenge"];
-	res.send(challenge)
+
+app.get("/webhook", (req, res) => {
+  /**
+   * UPDATE YOUR VERIFY TOKEN
+   *This will be the Verify Token value when you set up webhook
+  **/
+  const verify_token = process.env.VERIFY_TOKEN;
+
+  // Parse params from the webhook verification request
+  let mode = req.query["hub.mode"];
+  let token = req.query["hub.verify_token"];
+  let challenge = req.query["hub.challenge"];
+
+  // Check if a token and mode were sent
+  if (mode && token) {
+    // Check the mode and token sent are correct
+    if (mode === "subscribe" && token === verify_token) {
+      // Respond with 200 OK and challenge token from the request
+      console.log("WEBHOOK_VERIFIED");
+      res.status(200).send(challenge);
+    } else {
+      // Responds with '403 Forbidden' if verify tokens do not match
+      res.sendStatus(403);
+    }
+  }
 });
+
+
+// app.get('/webhook', (req, res) => {
+// 	let mode = req.query["hub.mode"];
+// 	let token = req.query["hub.verify_token"];
+// 	let challenge = req.query["hub.challenge"];
+// 	res.send(challenge)
+// });
+
+// Accepts POST requests at /webhook endpoint
+app.post("/webhook", (req, res) => {
+	// Parse the request body from the POST
+	let body = req.body;
+  
+	// Check the Incoming webhook message
+	console.log(JSON.stringify(req.body, null, 2));
+  
+	// info on WhatsApp text message payload: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/payload-examples#text-messages
+	if (req.body.object) {
+	  if (
+		req.body.entry &&
+		req.body.entry[0].changes &&
+		req.body.entry[0].changes[0] &&
+		req.body.entry[0].changes[0].value.messages &&
+		req.body.entry[0].changes[0].value.messages[0]
+	  ) {
+		let phone_number_id =
+		  req.body.entry[0].changes[0].value.metadata.phone_number_id;
+		let from = req.body.entry[0].changes[0].value.messages[0].from; // extract the phone number from the webhook payload
+		let msg_body = req.body.entry[0].changes[0].value.messages[0].text.body; // extract the message text from the webhook payload
+		axios({
+		  method: "POST", // Required, HTTP method, a string, e.g. POST, GET
+		  url:
+			"https://graph.facebook.com/v12.0/" +
+			phone_number_id +
+			"/messages?access_token=" +
+			WHATSAPP_ACCESS_TOKEN,
+		  data: {
+			messaging_product: "whatsapp",
+			to: from,
+			text: { body: "Ack: " + msg_body },
+		  },
+		  headers: { "Content-Type": "application/json" },
+		});
+	  }
+	  res.sendStatus(200);
+	} else {
+	  // Return a '404 Not Found' if event is not from a WhatsApp API
+	  res.sendStatus(404);
+	}
+  });
+
+
+//   app.post('/webhook', async (req, res) => {
+
+// 	try {
+// 		const body = req.body;
+
+// 		const { phone_number_id, from, msg_body } = getMsg(body)
+// 		console.log("phone", phone_number_id, from)
+// 		if (from && msg_body) {
+// 			let msg = await getChatCompletion(msg_body)
+// 			console.log("message:", from, msg_body + ": " + msg)
+// 			let result = await sendMessage(msg, from, phone_number_id);
+// 		}
+// 	} catch (error) {
+// 		console.log(error)
+// 	}
+
+// 	// res.send('Yo!')
+// 	res.sendStatus(200);
+// });
 
 app.get('/privacy', (req, res) => {
 	let text = `Thank you for visiting our website/app. We take the privacy of our users very seriously and are committed to protecting your personal information. This privacy policy explains how we collect, use, and share your personal information when you use our website/app.
