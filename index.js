@@ -19,9 +19,12 @@ const configuration = new Configuration({
 
 const openai = new OpenAIApi(configuration);
 
-const app = express();
-app.use(express.json());
 
+const request = require("request"),
+  express = require("express"),
+  body_parser = require("body-parser"),
+  axios = require("axios").default,
+  app = express().use(body_parser.json());
 function getMsg(body) {
 
 	try {
@@ -179,8 +182,8 @@ app.post('/chat', async (req, res) => {
 		if (secret == SECRET_KEY && messages.length) {
 			try {
 				const prediction = await openai.createChatCompletion({
-					// model: "gpt-3.5-turbo",
-					model: "gpt-4",
+					model: "gpt-3.5-turbo",
+					// model: "gpt-4",
 					messages: messages,
 					max_tokens: 256
 				});
@@ -349,6 +352,7 @@ app.get("/webhook", (req, res) => {
     if (mode === "subscribe" && token === SECRET_KEY) {
       // Respond with 200 OK and challenge token from the request
       console.log("WEBHOOK_VERIFIED");
+	  
       res.status(200).send(challenge);
     } else {
       // Responds with '403 Forbidden' if verify tokens do not match
@@ -474,6 +478,4 @@ app.get('/privacy', (req, res) => {
 	res.send(text)
 });
 
-app.listen(3000, () => {
-	console.log('Server listening on port 3000');
-});
+app.listen(process.env.PORT || 1337, () => console.log("webhook is listening"));
